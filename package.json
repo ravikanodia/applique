@@ -1,0 +1,33 @@
+{
+  "name": "applique",
+  "version": "0.0.0",
+  "description": "IPS patch applier.",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "dependencies": {
+    "chai": "^3.5.0"
+  },
+  "devDependencies": {
+    "mocha": "^3.2.0"
+  },
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ravikanodia/applique.git"
+  },
+  "keywords": [
+    "ips",
+    "patch"
+  ],
+  "author": "Ravi Kanodia <ravileonkanodia@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ravikanodia/applique/issues"
+  },
+  "homepage": "https://github.com/ravikanodia/applique#readme"
+}
