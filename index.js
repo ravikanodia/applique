@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('fs');
 var ArgumentParser = require('argparse').ArgumentParser;
+var ipsParser = require('./parsers/ipsParser');
+
 var parser = new ArgumentParser({
 	version: '0.0.0',
 	addHelp: true,
@@ -20,3 +23,6 @@ parser.addArgument(
 
 var args = parser.parseArgs();
 console.dir(args);
+
+var parser = ipsParser(args.patch);
+parser.getAllPatches();
