@@ -63,22 +63,24 @@ var IpsParser = function(filename) {
 	}
     }
 
-    console.dir("ips parser got filename: " + this.filename);
+    console.dir("Parsing IPS file: " + this.filename);
 
     this.validateIpsFileHeader = function() {
-	console.dir("validating ips file header");
 	var headerBuffer = this.readBytesAsBuffer(IPS_HEADER.length, "header");
 	if (headerBuffer != IPS_HEADER) {
 	    throw new Error("Invalid IPS patch header");
 	}
+        console.dir("IPS file header validated.");
     }
 
     this.getNextPatch = function() {
 	var offsetBuffer = this.readBytesAsBuffer(IPS_OFFSET_SIZE, "offset or EOF");
+	// TODO: Technically, "EOF" is also a valid offset. Because fs lacks a peek()
+	// function, it's kind of a pain to handle those cases correctly.
 	if (offsetBuffer == IPS_END_MARKER) {
 	    // TODO: If there's anything in the file past the EOF marker,
 	    // throw an Error.
-	    console.dir("found end marker");
+	    console.dir("Found end marker.");
 	    return null;
 	}
       	var offset = offsetBuffer.readUIntBE(0, IPS_OFFSET_SIZE);
