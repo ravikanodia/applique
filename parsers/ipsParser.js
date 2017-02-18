@@ -33,39 +33,48 @@ var IpsParser = function(filename) {
     this.filename = filename;
     this.file = null;
 
+    // Returns a new buffer of size length, filled with data from the file.
+    // If not enough data was read, throws an error.
+    this.readBytesAsBuffer = function(length, name) {
+	var buf = Buffer.alloc(length);
+	var bytesRead = fs.readSync(this.file, buf, 0, length, null);
+	if (bytesRead != length) {
+	    throw new Error("Expected " + length + " bytes of " + name + " but hit end of file after " + bytesRead + " bytes.");
+	}
+        console.dir("Got " + length + " bytes of " + name);
+	return buf;
+    };
+
+    // Because the patch functions take a Buffer as their argument,
+    // the target file has to be able to fit in memory. It would be cool if
+    // they could stream a file of arbitrary size from disk, and patch
+    // as they go.
+    this.makeRlePatch = function(offset, length, value) {
+	return function(buf) {
+	    for (var i = 0; i < length; i++) {
+		buf[offset + i] = value;
+	    }
+	};
+    }
+
+    this.makeDataPatch = function(offset, data) {
+	return function(buf) {
+	    data.copy(buf, offset);
+	}
+    }
+
     console.dir("ips parser got filename: " + this.filename);
 
     this.validateIpsFileHeader = function() {
-	if (!this.file) {
-	    this.file = fs.openSync(filename, 'r');
-	}
 	console.dir("validating ips file header");
-	var headerBuffer = Buffer.alloc(IPS_HEADER.length);
-	var bytesRead = fs.readSync(
-	    this.file,
-	    headerBuffer,
-	    0,
-	    IPS_HEADER.length,
-	    null);
-	console.dir("got " + bytesRead + " bytes: " + headerBuffer);
-	if (headerBuffer == IPS_HEADER) {
-	    console.dir("It's an IPS patch");
-	} else {
-	    throw new Error("Not an IPS patch");
+	var headerBuffer = this.readBytesAsBuffer(IPS_HEADER.length, "header");
+	if (headerBuffer != IPS_HEADER) {
+	    throw new Error("Invalid IPS patch header");
 	}
     }
 
     this.getNextPatch = function() {
-	var offsetBuffer = Buffer.alloc(IPS_OFFSET_SIZE);
-	var bytesRead = fs.readSync(
-	    this.file,
-	    offsetBuffer,
-	    0,
-	    IPS_OFFSET_SIZE,
-	    null);
-	if (bytesRead < IPS_OFFSET_SIZE) {
-	    throw new Error("Malformed IPS patch. Expected a 3-byte offset indicator, or an EOF marker, but got end-of-file instead.");
-	}
+	var offsetBuffer = this.readBytesAsBuffer(IPS_OFFSET_SIZE, "offset or EOF");
 	if (offsetBuffer == IPS_END_MARKER) {
 	    // TODO: If there's anything in the file past the EOF marker,
 	    // throw an Error.
@@ -74,87 +83,38 @@ var IpsParser = function(filename) {
 	}
       	var offset = offsetBuffer.readUIntBE(0, IPS_OFFSET_SIZE);
 
-	var sizeBuffer = Buffer.alloc(IPS_SIZE_SIZE);
-	bytesRead = fs.readSync(
-	    this.file,
-	    sizeBuffer,
-	    0,
-	    IPS_SIZE_SIZE,
-	    null);
-	if (bytesRead < IPS_SIZE_SIZE) {
-	    throw new Error("Malformed IPS patch. Expected a 2-byte size indicator, but got end-of-file instead.");
-	}
-	var size = sizeBuffer.readUIntBE(0, 2);
+	var sizeBuffer = this.readBytesAsBuffer(IPS_SIZE_SIZE, "size");
+	var size = sizeBuffer.readUIntBE(0, IPS_SIZE_SIZE);
 	if (size == 0) {
-	    console.dir("size is 0. run-length encoding.");
-	    var runLengthBuffer = Buffer.alloc(IPS_RLE_LENGTH_SIZE);
-	    bytesRead = fs.readSync(
-		this.file,
-		runLengthBuffer,
-		0,
-		IPS_RLE_LENGTH_SIZE,
-		null);
-	    if (bytesRead < IPS_RLE_LENGTH_SIZE) {
-		throw new Error("Malformed IPS patch. Expected a 2-byte run length indicator, but got end-of-file instead.");
-	    }
+	    console.dir("size field is 0 (record is run-length encoding)");
+	    var runLengthBuffer = this.readBytesAsBuffer(IPS_RLE_LENGTH_SIZE, "run length");
 	    var runLength = runLengthBuffer.readUIntBE(0, 2);
-	    
-	    var valueBuffer = Buffer.alloc(IPS_RLE_VALUE_SIZE);
-	    bytesRead = fs.readSync(
-		this.file,
-		valueBuffer,
-		0,
-		IPS_RLE_VALUE_SIZE,
-		null);
-	    if (bytesRead < IPS_RLE_VALUE_SIZE) {
-		throw new Error("Malformed IPS patch. Expected 1-byte run value, but got end-of-file instead.");
-	    }
 
-	    var patch =  {
-		type: "ips_rle",
-		offset: offset,
-		runLength: runLength,
-		value: valueBuffer
-	    };
-	    console.dir("patch: " + patch);
-	    return patch;
+	    var valueBuffer = this.readBytesAsBuffer(IPS_RLE_VALUE_SIZE, "run value");
+
+	    return this.makeRlePatch(offset, runLength, valueBuffer);
 	} else {
-	    console.dir("size is: " + size);
-
-	    var dataBuffer = Buffer.alloc(size);
-	    bytesRead = fs.readSync(
-		this.file,
-		dataBuffer,
-		0,
-		size,
-		null);
-	    if (bytesRead < size) {
-		throw new Error("Malformed IPS patch. Expected " + size + " bytes of data, but hit end of file after only " + bytesRead + " bytes.");
-	    }
-	    var patch = {
-		type: "ips_data",
-		offset: offset,
-		size: size,
-		data: dataBuffer
-	    };
-	    console.dir("patch type: " + patch.type + "; offset: " + patch.offset + "; size: " + size + "; data: " + dataBuffer);
-	    return patch;
+	    console.dir("size is " + size + " (plain data)");
+	    var dataBuffer = this.readBytesAsBuffer(size, "data");
+	    return this.makeDataPatch(offset, dataBuffer);
 	}	
     }
 
     this.getAllPatches = function() {
+	this.file = fs.openSync(filename, 'r');
+
 	this.validateIpsFileHeader();
 
-	var patch;
 	var patches = [];
-
 	while (true) {
-	    patch = this.getNextPatch();
+	    var patch = this.getNextPatch();
 	    if (patch === null) {
 		break;
 	    }
 	    patches.push(patch);
 	}
+
+	fs.closeSync(this.file);
 
 	return patches;
     }
