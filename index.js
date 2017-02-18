@@ -26,13 +26,17 @@ parser.addArgument(
     {
 	help: 'output file'
     });
+parser.addArgument(
+    ['-d', '--dry-run'],
+    {
+	help: 'dry run (don\'t save output file)'
+    });
 
 var args = parser.parseArgs();
-console.dir(args);
 
 var parser = ipsParser(args.patch);
 var patches = parser.getAllPatches();
 
-var patcher = patcher(args.file, patches, args.output);
+var patcher = patcher(args.file, patches, args.output, args.dry_run);
 patcher.applyPatches();
 
