@@ -43,6 +43,10 @@ const IPS_FOOTER = "EOF";
 // * The IPS format does not lend itself to streaming the input file off of
 //   disk and patching as you parse the IPS file, because there is no
 //   requirement for a patch's offset to be greater than the previous one.
+// * IPS patches don't have any type of file integrity checks, for either the
+//   input or output files. Thus there is no way to know if the file you are
+//   patching is the "right" file, and no way to be sure that you've applied
+//   the patch correctly except to compare it against a trusted reference.
 
 
 var IpsParser = function(filename) {
