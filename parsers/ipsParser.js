@@ -26,18 +26,19 @@ const IPS_RLE_LENGTH_SIZE = 2;
 const IPS_RLE_VALUE_SIZE = 1;
 
 // An IPS file always ends with "EOF".
-const IPS_END_MARKER = "EOF";
+const IPS_FOOTER = "EOF";
 
 
 var IpsParser = function(filename) {
     this.filename = filename;
     this.file = null;
 
+    // TODO: Move filesystem-related functions to a separate module.
     // Returns a new buffer of size length, filled with data from the file.
     // If not enough data was read, throws an error.
-    this.readBytesAsBuffer = function(length, name) {
+    this.readBytesAsBuffer = function(length, name, position=null) {
 	var buf = Buffer.alloc(length);
-	var bytesRead = fs.readSync(this.file, buf, 0, length, null);
+	var bytesRead = fs.readSync(this.file, buf, 0, length, position);
 	if (bytesRead != length) {
 	    throw new Error("Expected " + length + " bytes of " + name + " but hit end of file after " + bytesRead + " bytes.");
 	}
@@ -49,10 +50,10 @@ var IpsParser = function(filename) {
     // the target file has to be able to fit in memory. It would be cool if
     // they could stream a file of arbitrary size from disk, and patch
     // as they go.
-    this.makeRlePatch = function(offset, length, value) {
+    this.makeRlePatch = function(offset, length, valueBuf) {
 	return function(buf) {
 	    for (var i = 0; i < length; i++) {
-		buf[offset + i] = value;
+		buf[offset + i] = valueBuf[0];
 	    }
 	};
     }
@@ -63,10 +64,9 @@ var IpsParser = function(filename) {
 	}
     }
 
-    console.dir("Parsing IPS file: " + this.filename);
-
-    this.validateIpsFileHeader = function() {
-	var headerBuffer = this.readBytesAsBuffer(IPS_HEADER.length, "header");
+    this.validateIpsHeader = function() {
+	var headerBuffer =
+	    this.readBytesAsBuffer(IPS_HEADER.length, "header");
 	if (headerBuffer != IPS_HEADER) {
 	    throw new Error("Invalid IPS patch header");
 	}
@@ -74,26 +74,38 @@ var IpsParser = function(filename) {
     }
 
     this.getNextPatch = function() {
-	var offsetBuffer = this.readBytesAsBuffer(IPS_OFFSET_SIZE, "offset or EOF");
-	// TODO: Technically, "EOF" is also a valid offset. Because fs lacks a peek()
-	// function, it's kind of a pain to handle those cases correctly.
-	if (offsetBuffer == IPS_END_MARKER) {
-	    // TODO: If there's anything in the file past the EOF marker,
-	    // throw an Error.
-	    console.dir("Found end marker.");
+	// "EOF" is technically a valid offset. For the sake of correctness,
+	// don't just stop when you see "EOF" in the offset field - make sure
+	// this is the end of the file. If not, the IPS patch is malformed.
+	var offsetBuffer =
+	    this.readBytesAsBuffer(IPS_OFFSET_SIZE, "offset or EOF");
+
+	var sizeBuf = Buffer.alloc(IPS_SIZE_SIZE);
+	var sizeBytesRead = fs.readSync(
+	    this.file, sizeBuf, 0, IPS_SIZE_SIZE, null);
+
+	if (offsetBuffer == IPS_FOOTER && sizeBytesRead === 0) {
+	    console.dir("Reached IPS footer.");
 	    return null;
 	}
-      	var offset = offsetBuffer.readUIntBE(0, IPS_OFFSET_SIZE);
 
-	var sizeBuffer = this.readBytesAsBuffer(IPS_SIZE_SIZE, "size");
-	var size = sizeBuffer.readUIntBE(0, IPS_SIZE_SIZE);
+	if (sizeBytesRead != IPS_SIZE_SIZE) {
+	    throw new Error("Expected to find 2 bytes of size.");
+	}
+
+     	var offset = offsetBuffer.readUIntBE(0, IPS_OFFSET_SIZE);
+	var size = sizeBuf.readUIntBE(0, IPS_SIZE_SIZE);
 	if (size == 0) {
 	    console.dir("size field is 0 (record is run-length encoding)");
 	    var runLengthBuffer = this.readBytesAsBuffer(IPS_RLE_LENGTH_SIZE, "run length");
 	    var runLength = runLengthBuffer.readUIntBE(0, 2);
+	    if (runLength === 0) {
+		throw new Error("Can't have a run of zero length.");
+	    }
 
 	    var valueBuffer = this.readBytesAsBuffer(IPS_RLE_VALUE_SIZE, "run value");
 
+	    console.dir("RLE length: " + runLength + "; data: " + valueBuffer)
 	    return this.makeRlePatch(offset, runLength, valueBuffer);
 	} else {
 	    console.dir("size is " + size + " (plain data)");
@@ -105,7 +117,9 @@ var IpsParser = function(filename) {
     this.getAllPatches = function() {
 	this.file = fs.openSync(filename, 'r');
 
-	this.validateIpsFileHeader();
+        console.dir("Parsing IPS file: " + this.filename);
+
+	this.validateIpsHeader();
 
 	var patches = [];
 	while (true) {
