@@ -1,0 +1,13 @@
+Binary files often don't lend themselves to comments.
+
+noop.ips:
+ * The smallest possible valid IPS patch. It consists of the header and the
+   footer, with no patch records.
+ * The output file should be identical to the input file.
+
+zero_run_length.ips:
+ * An IPS file with a valid header and footer. The only record specifies
+   a run-length encoding with length zero.
+ * I'm not sure whether that should be treated as an error, or as a no-op,
+   or even a no-op with an asterisk (the asterisk being, if the offset is
+   past the end of the input file, should it get zero-padding?)
