@@ -2,7 +2,7 @@ const fs = require('fs');
 
 // Based on http://zerosoft.zophar.net/ips.php
 
-// An IPS file always starts with "PATCH".
+// An IPS file always starts with the ASCII text "PATCH" (not null-terminated).
 const IPS_HEADER = "PATCH";
 
 // After the header, an IPS file can have any number of patch records.
@@ -25,8 +25,24 @@ const IPS_SIZE_SIZE = 2;
 const IPS_RLE_LENGTH_SIZE = 2;
 const IPS_RLE_VALUE_SIZE = 1;
 
-// An IPS file always ends with "EOF".
+// An IPS file always ends with "EOF" (not null-terminated)).
 const IPS_FOOTER = "EOF";
+
+// A couple of observations:
+// * Because the offset size is fixed at 3 bytes (24 bits), IPS patches cannot
+//   specify an offset higher than 2^24 - 1. That is to say, they cannot
+//   operate on files larger than 2GB.
+// * IPS patches can potentially write past the end of the file. This behavior
+//   is not explicitly documented as far as I'm aware, but it's definitely used
+//   'in the wild' by real patch authors. The spec does not say what to do if
+//   there is a gap between the end of the original file and an offset specified
+//   by an IPS file. Based on observation of other IPS tools, I believe the
+//   correct behavior is to pad the original file with as many zeroes as is
+//   necessary to fill the gap. (And luckily it appears that is the default
+//   behavior of node's fs module.)
+// * The IPS format does not lend itself to streaming the input file off of
+//   disk and patching as you parse the IPS file, because there is no
+//   requirement for a patch's offset to be greater than the previous one.
 
 
 var IpsParser = function(filename) {
@@ -46,21 +62,20 @@ var IpsParser = function(filename) {
 	return buf;
     };
 
-    // Because the patch functions take a Buffer as their argument,
-    // the target file has to be able to fit in memory. It would be cool if
-    // they could stream a file of arbitrary size from disk, and patch
-    // as they go.
+    // Doing this in the filesystem avoids having to fit a potentially
+    // large Buffer in memory all at once. Also, node Buffers can't be resized
+    // after they are created, and IPS patches can write past the end of the
+    // file.
     this.makeRlePatch = function(offset, length, valueBuf) {
-	return function(buf) {
-	    for (var i = 0; i < length; i++) {
-		buf[offset + i] = valueBuf[0];
-	    }
+	return function(fd) {
+	    var patchBuf = Buffer.alloc(length, valueBuf[0]);
+	    fs.writeSync(fd, patchBuf, 0, length, offset);
 	};
     }
 
     this.makeDataPatch = function(offset, data) {
-	return function(buf) {
-	    data.copy(buf, offset);
+	return function(fd) {
+	    fs.writeSync(fd, data, 0, data.length, offset);
 	}
     }
 
