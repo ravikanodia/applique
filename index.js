@@ -5,6 +5,7 @@ const fs = require('fs');
 var ArgumentParser = require('argparse').ArgumentParser;
 var ipsParser = require('./parsers/ipsParser');
 var patcher = require('./patcher');
+var File = require('./lib/File');
 
 var parser = new ArgumentParser({
 	version: '0.0.0',
@@ -34,7 +35,10 @@ parser.addArgument(
 
 var args = parser.parseArgs();
 
-var parser = ipsParser(args.patch);
+var inputFile = File(args.file);
+var patchFile = File(args.patch);
+
+var parser = ipsParser(inputFile, patchFile);
 var patches = parser.getAllPatches();
 
 var patcher = patcher(args.file, patches, args.output, args.dry_run);

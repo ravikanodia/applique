@@ -50,8 +50,10 @@ const IPS_FOOTER = "EOF";
 //   the patch correctly except to compare it against a trusted reference.
 
 
-var IpsParser = function(filename) {
-    this.filename = filename;
+var IpsParser = function(inputFile, patchFile, outputFilename) {
+    this.inputFile = inputFile;
+    this.patchFile = patchFile;
+    this.outputFilename = outputFilename;
     this.file = null;
 
     // Doing this in the filesystem avoids having to fit a potentially
@@ -72,7 +74,7 @@ var IpsParser = function(filename) {
     }
 
     this.validateIpsHeader = function() {
-	var headerBuffer = this.file.readBytesAsBuffer(IPS_HEADER.length, "header");
+	var headerBuffer = this.patchFile.readBytesAsBuffer(IPS_HEADER.length, "header");
 	if (headerBuffer != IPS_HEADER) {
 	    throw new Error("Invalid IPS patch header");
 	}
@@ -83,9 +85,9 @@ var IpsParser = function(filename) {
 	// "EOF" is technically a valid offset. For the sake of correctness,
 	// don't just stop when you see "EOF" in the offset field - make sure
 	// this is the end of the file. If not, the IPS patch is malformed.
-	if (this.file.position == this.file.getFileLength() - 3) {
-	    var eofBuffer = this.file.readBytesAsBuffer(
-		IPS_FOOTER.length, "EOF", this.file.position);
+	if (this.inputFile.position == this.inputFile.getFileLength() - 3) {
+	    var eofBuffer = this.inputFile.readBytesAsBuffer(
+		IPS_FOOTER.length, "EOF", this.inputFile.position);
 	    if (eofBuffer == IPS_FOOTER) {
 		console.dir("Reached IPS footer.");
 		return null;
@@ -94,37 +96,29 @@ var IpsParser = function(filename) {
 	    }
 	}
 
-/*	var offsetBuf = this.file.readBytesAsBuffer(IPS_OFFSET_SIZE, "offset");
-	var sizeBuf = this.file.readBytesAsBuffer(IPS_SIZE_SIZE, "size");
-
-     	var offset = offsetBuf.readUIntBE(0, IPS_OFFSET_SIZE);
-	var size = sizeBuf.readUIntBE(0, IPS_SIZE_SIZE);*/
-	var offset = this.file.readBytesAsUIntBE(IPS_OFFSET_SIZE);
-	var size = this.file.readBytesAsUIntBE(IPS_SIZE_SIZE);
+	var offset = this.inputFile.readBytesAsUIntBE(IPS_OFFSET_SIZE);
+	var size = this.inputFile.readBytesAsUIntBE(IPS_SIZE_SIZE);
 	if (size == 0) {
 	    console.dir("size field is 0 (record is run-length encoding)");
-//	    var runLengthBuffer = this.file.readBytesAsBuffer(IPS_RLE_LENGTH_SIZE, "run length");
-	    //	    var runLength = runLengthBuffer.readUIntBE(0, 2);
-	    var runLengthBuffer = this.file.readBytesAsUIntBE(2)
+
+	    var runLengthBuffer = this.inputFile.readBytesAsUIntBE(2)
 	    if (runLength === 0) {
 		throw new Error("Can't have a run of zero length.");
 	    }
 
-	    var valueBuffer = this.file.readBytesAsBuffer(IPS_RLE_VALUE_SIZE, "run value");
+	    var valueBuffer = this.inputFile.readBytesAsBuffer(IPS_RLE_VALUE_SIZE, "run value");
 
 	    console.dir("RLE length: " + runLength + "; data: " + valueBuffer)
 	    return this.makeRlePatch(offset, runLength, valueBuffer);
 	} else {
 	    console.dir("size is " + size + " (plain data)");
-	    var dataBuffer = this.file.readBytesAsBuffer(size, "data");
+	    var dataBuffer = this.inputFile.readBytesAsBuffer(size, "data");
 	    return this.makeDataPatch(offset, dataBuffer);
 	}	
     }
 
     this.getAllPatches = function() {
-	this.file = File(filename);
-
-        console.dir("Parsing IPS file: " + this.filename);
+        console.dir("Parsing IPS file: " + this.patchFile.getFilename());
 
 	this.validateIpsHeader();
 
@@ -137,7 +131,7 @@ var IpsParser = function(filename) {
 	    patches.push(patch);
 	}
 
-	this.file.close();
+	this.patchFile.close();
 
 	return patches;
     }
