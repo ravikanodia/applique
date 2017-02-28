@@ -61,14 +61,14 @@ var IpsParser = function(inputFile, patchFile, outputFilename) {
     // after they are created, and IPS patches can write past the end of the
     // file.
     this.makeRlePatch = function(offset, length, valueBuf) {
-	return function(fd) {
+	return function(outputFd) {
 	    var patchBuf = Buffer.alloc(length, valueBuf[0]);
-	    fs.writeSync(fd, patchBuf, 0, length, offset);
+	    fs.writeSync(outputFd, patchBuf, 0, length, offset);
 	};
     }
 
     this.makeDataPatch = function(offset, data) {
-	return function(fd) {
+	return function(outputFd) {
 	    fs.writeSync(fd, data, 0, data.length, offset);
 	}
     }

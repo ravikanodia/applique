@@ -4,6 +4,7 @@
 const fs = require('fs');
 var ArgumentParser = require('argparse').ArgumentParser;
 var ipsParser = require('./parsers/ipsParser');
+var upsParser = require('./parsers/upsParser');
 var patcher = require('./patcher');
 var File = require('./lib/File');
 
@@ -28,6 +29,12 @@ parser.addArgument(
 	help: 'output file'
     });
 parser.addArgument(
+    ['-t', '--type'],
+    {
+	choices: ['ips', 'ups'],
+	help: 'patch type',
+    });
+parser.addArgument(
     ['-d', '--dry-run'],
     {
 	help: 'dry run (don\'t save output file)'
@@ -38,7 +45,12 @@ var args = parser.parseArgs();
 var inputFile = File(args.file);
 var patchFile = File(args.patch);
 
-var parser = ipsParser(inputFile, patchFile);
+var parser;
+if (args.type == 'ups') {
+    parser = upsParser(inputFile, patchFile);
+} else {
+    parser = ipsParser(inputFile, patchFile);
+}
 var patches = parser.getAllPatches();
 
 var patcher = patcher(args.file, patches, args.output, args.dry_run);
