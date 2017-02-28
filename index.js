@@ -44,6 +44,8 @@ var args = parser.parseArgs();
 
 var inputFile = File(args.file);
 var patchFile = File(args.patch);
+console.log("input filesize is: " + inputFile.getFileLength());
+console.log("patch filesize is: " + patchFile.getFileLength());
 
 var parser;
 if (args.type == 'ups') {
