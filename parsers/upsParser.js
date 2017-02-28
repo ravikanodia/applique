@@ -11,7 +11,8 @@ const File = require('../lib/File');
 // Then, any number of "hunks", consisting of:
 // -- A variable-width integer, for the number of bytes to skip in the source file
 // -- A block of data to XOR with the source file
-//  +++ The block ends with a zero byte (which is included in the block).
+//  +++ The block ends with a zero byte (which is included in the block)
+//   --- ... except for the last block, if it is past the end of the original file(?)
 // Lastly, three CRC32 checksums:
 // -- One for the source file
 // -- One for the destination file
@@ -66,17 +67,30 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
     this.outputCRC = null;
     this.patchCRC = null;
 
-    this.makeXorPatch = function(offset, dataBuf) {
+    this.makeXorPatch = function(skipLength, dataBuf) {
 	var inputFile = this.inputFile;
 	return function(outputFd) {
-	    inputFile.seekRelativeToCurrent(offset);
-	    var buf = inputFile.readBytesAsBuffer(dataBuf.length, "source input");
+	    var skipBuf = inputFile.readBytesAsBuffer(skipLength, "skipped bytes", null, false);
+	    fs.writeSync(outputFd, skipBuf);
+
+	    var buf = inputFile.readBytesAsBuffer(dataBuf.length, "source input", null, false);
 	    for (var i = 0; i < dataBuf.length; i++) {
 		buf[i] ^= dataBuf[i];
 	    }
-	    outputFd.writeSync(buf);
+	    fs.writeSync(outputFd, buf);
 	};
-    }
+    };
+
+    this.makeCopyRemainingPatch = function() {
+	var inputFile = this.inputFile;
+	return function(outputFd) {
+	    var remainingBytes = inputFile.getFileLength() - inputFile.getPosition();
+	    if (remainingBytes > 0) {
+		var remainingBuf = inputFile.readBytesAsBuffer(remainingBytes, "trailing data");
+		fs.writeSync(outputFd, remainingBuf);
+	    }
+	}
+    };
 
     console.dir("Parsing UPS file: " + this.filename);
 
@@ -152,12 +166,17 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	console.log("getting next UPS patch");
 	var skipLength = this.readUpsVariableLengthInteger();
 	console.log("skip length: " + skipLength);
-	var patchStartPosition = thie.patchFile.getPosition();
+	var patchStartPosition = this.patchFile.getPosition();
 	do {
 	    var buf = this.patchFile.readBytesAsBuffer(1, "xor");
 	} while (buf[0] != 0x00)
 
 	var patchLength = this.patchFile.getPosition() - patchStartPosition;
+	// In the last patch, don't copy the 0 terminator. If we're past the end
+	// of the input file, it will cause us to write an extra byte.
+	if (this.isAtFooter()) {
+	    patchLength -= 1;
+	}
 	console.log("patch length: " + patchLength);
 	var patchBuf = this.patchFile.readBytesAsBuffer(patchLength, "xor", patchStartPosition);
 
@@ -171,6 +190,7 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	console.log("Found input filesize of: " + this.inputFilesize);
 	this.outputFilesize = this.readUpsVariableLengthInteger();
 	this.getCRCs();
+	console.log("Found output filesize of: " + this.outputFilesize);
 
 	this.validateInputFile();
 	this.validatePatchFile();
@@ -180,6 +200,7 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	    var patch = this.getNextPatch();
 	    patches.push(patch);
 	}
+	patches.push(this.makeCopyRemainingPatch());
 
 	return patches;
     }
