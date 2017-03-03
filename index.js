@@ -49,12 +49,9 @@ console.log("patch filesize is: " + patchFile.getFileLength());
 
 var parser;
 if (args.type == 'ups') {
-    parser = upsParser(inputFile, patchFile);
+    parser = upsParser(inputFile, patchFile, args.output);
 } else {
-    parser = ipsParser(inputFile, patchFile);
+    parser = ipsParser(inputFile, patchFile, args.output);
 }
-var patches = parser.getAllPatches();
-
-var patcher = patcher(args.file, patches, args.output, args.dry_run);
-patcher.applyPatches();
+parser.applyAllPatches();
 

@@ -59,6 +59,7 @@ const CRC32_SIZE = 4;
 var UpsParser = function(inputFile, patchFile, outputFilename) {
     this.inputFile = inputFile;
     this.patchFile = patchFile;
+    this.outputFilename = outputFilename;
 
     this.inputFilesize = null;
     this.outputFilesize = null;
@@ -183,7 +184,7 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	return this.makeXorPatch(skipLength, patchBuf);
     }
 
-    this.getAllPatches = function() {
+    this.applyAllPatches = function() {
 	this.validateUpsFileHeader();
 
 	this.inputFilesize = this.readUpsVariableLengthInteger();
@@ -202,7 +203,20 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	}
 	patches.push(this.makeCopyRemainingPatch());
 
-	return patches;
+	var tempFilename = "_" + this.outputFilename + ".temp";
+	console.dir("Creating temp output file: " + tempFilename);
+	var tempFile = fs.openSync(tempFilename, "w");
+
+	for (var i = 0; i < patches.length; i++) {
+	    console.dir("Applying patch " + (i+1) + " of " + patches.length);
+	    var patch = patches[i];
+	    patch(tempFile);
+	}
+
+	fs.closeSync(tempFile);
+	console.dir("Saving output file: " + this.outputFilename);
+	fs.renameSync(tempFilename, this.outputFilename);
+
     }
 	
     return this;	

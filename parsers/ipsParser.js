@@ -129,7 +129,7 @@ var IpsParser = function(inputFile, patchFile, outputFilename) {
 	}	
     };
 
-    this.getAllPatches = function() {
+    this.applyAllPatches = function() {
         console.dir("Parsing IPS file: " + this.patchFile.getFilename());
 
 	this.validateIpsHeader();
@@ -146,7 +146,19 @@ var IpsParser = function(inputFile, patchFile, outputFilename) {
 
 	this.patchFile.close();
 
-	return patches;
+	var tempFilename = "_" + this.outputFilename + ".temp";
+	console.dir("Creating temp output file: " + tempFilename);
+	var tempFile = fs.openSync(tempFilename, "w");
+
+	for (var i = 0; i < patches.length; i++) {
+	    console.dir("Applying patch " + (i+1) + " of " + patches.length);
+	    var patch = patches[i];
+	    patch(tempFile);
+	}
+
+	fs.closeSync(tempFile);
+	console.dir("Saving output file: " + this.outputFilename);
+	fs.renameSync(tempFilename, this.outputFilename);
     };
 	
     return this;	
