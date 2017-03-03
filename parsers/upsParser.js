@@ -56,10 +56,10 @@ const UPS_HEADER = "UPS1";
 
 const CRC32_SIZE = 4;
 
-var UpsParser = function(inputSource, patchSource, outputFilename) {
+var UpsParser = function(inputSource, patchSource, outputBuffer) {
     this.inputSource = inputSource;
     this.patchSource = patchSource;
-    this.outputFilename = outputFilename;
+    this.outputBuffer = outputBuffer;
 
     this.inputFilesize = null;
     this.outputFilesize = null;
@@ -70,25 +70,25 @@ var UpsParser = function(inputSource, patchSource, outputFilename) {
 
     this.makeXorPatch = function(skipLength, dataBuf) {
 	var inputSource = this.inputSource;
-	return function(outputFd) {
+	return function(outBuffer) {
 	    var skipBuf = inputSource.readBytesAsBuffer(skipLength, "skipped bytes", null, false);
-	    fs.writeSync(outputFd, skipBuf);
+	    outBuffer.write(skipBuf);
 
 	    var buf = inputSource.readBytesAsBuffer(dataBuf.length, "source input", null, false);
 	    for (var i = 0; i < dataBuf.length; i++) {
 		buf[i] ^= dataBuf[i];
 	    }
-	    fs.writeSync(outputFd, buf);
+	    outBuffer.write(buf);
 	};
     };
 
     this.makeCopyRemainingPatch = function() {
 	var inputSource = this.inputSource;
-	return function(outputFd) {
+	return function(outBuffer) {
 	    var remainingBytes = inputSource.getLength() - inputSource.getPosition();
 	    if (remainingBytes > 0) {
 		var remainingBuf = inputSource.readBytesAsBuffer(remainingBytes, "trailing data");
-		fs.writeSync(outputFd, remainingBuf);
+		outBuffer.write(remainingBuf);
 	    }
 	}
     };
@@ -185,6 +185,8 @@ var UpsParser = function(inputSource, patchSource, outputFilename) {
     }
 
     this.applyAllPatches = function() {
+	this.outputBuffer.extend(this.inputSource.getLength());
+
 	this.validateUpsFileHeader();
 
 	this.inputFilesize = this.readUpsVariableLengthInteger();
@@ -203,19 +205,19 @@ var UpsParser = function(inputSource, patchSource, outputFilename) {
 	}
 	patches.push(this.makeCopyRemainingPatch());
 
-	var tempFilename = "_" + this.outputFilename + ".temp";
-	console.dir("Creating temp output file: " + tempFilename);
-	var tempFile = fs.openSync(tempFilename, "w");
+//	var tempFilename = "_" + this.outputFilename + ".temp";
+//	console.dir("Creating temp output file: " + tempFilename);
+//	var tempFile = fs.openSync(tempFilename, "w");
 
 	for (var i = 0; i < patches.length; i++) {
 	    console.dir("Applying patch " + (i+1) + " of " + patches.length);
 	    var patch = patches[i];
-	    patch(tempFile);
+	    patch(outputBuffer);
 	}
 
-	fs.closeSync(tempFile);
-	console.dir("Saving output file: " + this.outputFilename);
-	fs.renameSync(tempFilename, this.outputFilename);
+//	fs.closeSync(tempFile);
+//	console.dir("Saving output file: " + this.outputFilename);
+//	fs.renameSync(tempFilename, this.outputFilename);
 
     }
 	

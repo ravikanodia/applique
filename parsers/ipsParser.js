@@ -50,20 +50,20 @@ const IPS_FOOTER = "EOF";
 //   the patch correctly except to compare it against a trusted reference.
 
 
-var IpsParser = function(inputSource, patchSource, outputFilename) {
+var IpsParser = function(inputSource, patchSource, outputBuffer) {
     this.inputSource = inputSource;
     this.patchSource = patchSource;
-    this.outputFilename = outputFilename;
+    this.outputBuffer = outputBuffer;
 
     // TODO: This method of copying the source file into the target file requires
     // the entire thing to fit in memory at once. Not elegant.
     this.makeCopyPatch = function() {
-	return function(outputFd) {
+	return function(outBuffer) {
 	    var inputFileBuf = this.inputSource.readBytesAsBuffer(
 		this.inputSource.getLength(),
 		"entire file",
 		0);
-	    fs.writeSync(outputFd, inputFileBuf);
+	    outBuffer.write(inputFileBuf);
 	};
     };
 
@@ -72,15 +72,15 @@ var IpsParser = function(inputSource, patchSource, outputFilename) {
     // after they are created, and IPS patches can write past the end of the
     // file.
     this.makeRlePatch = function(offset, length, valueBuf) {
-	return function(outputFd) {
+	return function(outBuffer) {
 	    var patchBuf = Buffer.alloc(length, valueBuf[0]);
-	    fs.writeSync(outputFd, patchBuf, 0, length, offset);
+	    outBuffer.write(patchBuf, offset);
 	};
     };
 
     this.makeDataPatch = function(offset, data) {
-	return function(outputFd) {
-	    fs.writeSync(outputFd, data, 0, data.length, offset);
+	return function(outBuffer) {
+	    outBuffer.write(data, offset);
 	}
     };
 
@@ -129,8 +129,6 @@ var IpsParser = function(inputSource, patchSource, outputFilename) {
     };
 
     this.applyAllPatches = function() {
-//        console.dir("Parsing IPS file: " + this.patchFile.getFilename());
-
 	this.validateIpsHeader();
 
 	var patches = [];
@@ -143,21 +141,11 @@ var IpsParser = function(inputSource, patchSource, outputFilename) {
 	    patches.push(patch);
 	}
 
-//	this.patchFile.close();
-
-	var tempFilename = "_" + this.outputFilename + ".temp";
-	console.dir("Creating temp output file: " + tempFilename);
-	var tempFile = fs.openSync(tempFilename, "w");
-
 	for (var i = 0; i < patches.length; i++) {
 	    console.dir("Applying patch " + (i+1) + " of " + patches.length);
 	    var patch = patches[i];
-	    patch(tempFile);
+	    patch(outputBuffer);
 	}
-
-	fs.closeSync(tempFile);
-	console.dir("Saving output file: " + this.outputFilename);
-	fs.renameSync(tempFilename, this.outputFilename);
     };
 	
     return this;	
