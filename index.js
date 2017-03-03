@@ -7,6 +7,7 @@ var ipsParser = require('./parsers/ipsParser');
 var upsParser = require('./parsers/upsParser');
 var patcher = require('./patcher');
 var File = require('./lib/File');
+var SourceBuffer = require('./lib/SourceBuffer');
 
 var parser = new ArgumentParser({
 	version: '0.0.0',
@@ -42,16 +43,18 @@ parser.addArgument(
 
 var args = parser.parseArgs();
 
-var inputFile = File(args.file);
-var patchFile = File(args.patch);
-console.log("input filesize is: " + inputFile.getFileLength());
-console.log("patch filesize is: " + patchFile.getFileLength());
+//var inputFile = File(args.file);
+//var patchFile = File(args.patch);
+//console.log("input filesize is: " + inputFile.getFileLength());
+//console.log("patch filesize is: " + patchFile.getFileLength());
 
 var parser;
+var inputSource = SourceBuffer(fs.readFileSync(args.file));
+var patchSource = SourceBuffer(fs.readFileSync(args.patch));
 if (args.type == 'ups') {
-    parser = upsParser(inputFile, patchFile, args.output);
-} else {
-    parser = ipsParser(inputFile, patchFile, args.output);
+    parser = upsParser(inputSource, patchSource, args.output);
+} else {    
+    parser = ipsParser(inputSource, patchSource, args.output);
 }
 parser.applyAllPatches();
 

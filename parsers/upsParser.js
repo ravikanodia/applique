@@ -56,9 +56,9 @@ const UPS_HEADER = "UPS1";
 
 const CRC32_SIZE = 4;
 
-var UpsParser = function(inputFile, patchFile, outputFilename) {
-    this.inputFile = inputFile;
-    this.patchFile = patchFile;
+var UpsParser = function(inputSource, patchSource, outputFilename) {
+    this.inputSource = inputSource;
+    this.patchSource = patchSource;
     this.outputFilename = outputFilename;
 
     this.inputFilesize = null;
@@ -69,12 +69,12 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
     this.patchCRC = null;
 
     this.makeXorPatch = function(skipLength, dataBuf) {
-	var inputFile = this.inputFile;
+	var inputSource = this.inputSource;
 	return function(outputFd) {
-	    var skipBuf = inputFile.readBytesAsBuffer(skipLength, "skipped bytes", null, false);
+	    var skipBuf = inputSource.readBytesAsBuffer(skipLength, "skipped bytes", null, false);
 	    fs.writeSync(outputFd, skipBuf);
 
-	    var buf = inputFile.readBytesAsBuffer(dataBuf.length, "source input", null, false);
+	    var buf = inputSource.readBytesAsBuffer(dataBuf.length, "source input", null, false);
 	    for (var i = 0; i < dataBuf.length; i++) {
 		buf[i] ^= dataBuf[i];
 	    }
@@ -83,20 +83,20 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
     };
 
     this.makeCopyRemainingPatch = function() {
-	var inputFile = this.inputFile;
+	var inputSource = this.inputSource;
 	return function(outputFd) {
-	    var remainingBytes = inputFile.getFileLength() - inputFile.getPosition();
+	    var remainingBytes = inputSource.getLength() - inputSource.getPosition();
 	    if (remainingBytes > 0) {
-		var remainingBuf = inputFile.readBytesAsBuffer(remainingBytes, "trailing data");
+		var remainingBuf = inputSource.readBytesAsBuffer(remainingBytes, "trailing data");
 		fs.writeSync(outputFd, remainingBuf);
 	    }
 	}
     };
 
-    console.dir("Parsing UPS file: " + this.filename);
+//    console.dir("Parsing UPS file: " + this.filename);
 
     this.validateUpsFileHeader = function() {
-	var headerBuffer = this.patchFile.readBytesAsBuffer(UPS_HEADER.length, "header");
+	var headerBuffer = this.patchSource.readBytesAsBuffer(UPS_HEADER.length, "header");
 	if (headerBuffer != UPS_HEADER) {
 	    throw new Error("Invalid UPS patch header");
 	}
@@ -104,22 +104,22 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
     }
 
     this.getCRCs = function() {
-	this.inputCRC = this.patchFile.readBytesAsBuffer(
+	this.inputCRC = this.patchSource.readBytesAsBuffer(
 	    CRC32_SIZE,
 	    "CRC32",
-	    this.patchFile.getFileLength() - (CRC32_SIZE * 3));
-	this.outputCRC = this.patchFile.readBytesAsBuffer(
+	    this.patchSource.getLength() - (CRC32_SIZE * 3));
+	this.outputCRC = this.patchSource.readBytesAsBuffer(
 	    CRC32_SIZE,
 	    "CRC32",
-	    this.patchFile.getFileLength() - (CRC32_SIZE * 2));
-	this.patchCRC = this.patchFile.readBytesAsBuffer(
+	    this.patchSource.getLength() - (CRC32_SIZE * 2));
+	this.patchCRC = this.patchSource.readBytesAsBuffer(
 	    CRC32_SIZE,
 	    "CRC32",
-	    this.patchFile.getFileLength() - CRC32_SIZE);
+	    this.patchSource.getLength() - CRC32_SIZE);
     }
 
     this.validateInputFile = function() {
-	var inputFilesize = this.inputFile.getFileLength();
+	var inputFilesize = this.inputSource.getLength();
 	if (inputFilesize != this.inputFilesize) {
 	    throw new Error("UPS patch specifies input file size of " + this.inputFilesize + ", but the specified file is of size " + inputFilesize);
 	} else {
@@ -130,8 +130,8 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
     }
 
     this.validatePatchFile = function() {
-	var patchBuf = this.patchFile.readBytesAsBuffer(
-	    this.patchFile.getFileLength() - CRC32_SIZE,
+	var patchBuf = this.patchSource.readBytesAsBuffer(
+	    this.patchSource.getLength() - CRC32_SIZE,
 	    "patch",
 	    0);
 	console.log("CRC32 checksum validation not supported; assuming patch is valid!");
@@ -142,7 +142,7 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	var shiftOffset = 0;
 
 	while (true) {
-	    var buf = this.patchFile.readBytesAsBuffer(1, "variable-length integer");
+	    var buf = this.patchSource.readBytesAsBuffer(1, "variable-length integer");
 	    var nextByte = buf[0];
 	    if (nextByte & 0x80) {
 		nextByte = nextByte & 0x7f;  // Unset top bit.
@@ -157,7 +157,7 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
     };
 
     this.isAtFooter = function() {
-	if (this.patchFile.getPosition() == this.patchFile.getFileLength() - (3 * CRC32_SIZE)) {
+	if (this.patchSource.getPosition() == this.patchSource.getLength() - (3 * CRC32_SIZE)) {
 	    return true;
 	}
 	return false
@@ -167,19 +167,19 @@ var UpsParser = function(inputFile, patchFile, outputFilename) {
 	console.log("getting next UPS patch");
 	var skipLength = this.readUpsVariableLengthInteger();
 	console.log("skip length: " + skipLength);
-	var patchStartPosition = this.patchFile.getPosition();
+	var patchStartPosition = this.patchSource.getPosition();
 	do {
-	    var buf = this.patchFile.readBytesAsBuffer(1, "xor");
+	    var buf = this.patchSource.readBytesAsBuffer(1, "xor");
 	} while (buf[0] != 0x00)
 
-	var patchLength = this.patchFile.getPosition() - patchStartPosition;
+	var patchLength = this.patchSource.getPosition() - patchStartPosition;
 	// In the last patch, don't copy the 0 terminator. If we're past the end
 	// of the input file, it will cause us to write an extra byte.
 	if (this.isAtFooter()) {
 	    patchLength -= 1;
 	}
 	console.log("patch length: " + patchLength);
-	var patchBuf = this.patchFile.readBytesAsBuffer(patchLength, "xor", patchStartPosition);
+	var patchBuf = this.patchSource.readBytesAsBuffer(patchLength, "xor", patchStartPosition);
 
 	return this.makeXorPatch(skipLength, patchBuf);
     }
