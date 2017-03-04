@@ -205,20 +205,11 @@ var UpsParser = function(inputSource, patchSource, outputBuffer) {
 	}
 	patches.push(this.makeCopyRemainingPatch());
 
-//	var tempFilename = "_" + this.outputFilename + ".temp";
-//	console.dir("Creating temp output file: " + tempFilename);
-//	var tempFile = fs.openSync(tempFilename, "w");
-
 	for (var i = 0; i < patches.length; i++) {
 	    console.dir("Applying patch " + (i+1) + " of " + patches.length);
 	    var patch = patches[i];
 	    patch(outputBuffer);
 	}
-
-//	fs.closeSync(tempFile);
-//	console.dir("Saving output file: " + this.outputFilename);
-//	fs.renameSync(tempFilename, this.outputFilename);
-
     }
 	
     return this;	
