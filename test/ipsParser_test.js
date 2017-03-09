@@ -27,9 +27,25 @@ describe('IpsParser', function() {
 	parser.applyAllPatches();
 
 	outputBuf.equals(inputBuf).should.equal(true);
-	
-//	var onePlusOne = 1 + 1;
-//	onePlusOne.should.equal(2);
 	done();
     });
+
+    it('applies a data patch correctly', function(done) {
+	var inputBuf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"));
+	var outputBuf = SourceBuffer();
+	var patchBuf = SourceBuffer(fs.readFileSync('test/patches/alpha-la.ips'));
+
+	var parser = IpsParser(inputBuf, patchBuf, outputBuf);
+	parser.applyAllPatches();
+	var expectBuf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLaLiLuLeLoVWXYZ0123456789"));
+	outputBuf.equals(expectBuf).should.equal(true);
+				   
+	done();
+    });
+
+    it('applies a run-length encoded patch correctly', function(done) {
+	done();
+    });
+
+    
 });
