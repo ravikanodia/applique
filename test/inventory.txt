@@ -11,3 +11,11 @@ zero_run_length.ips:
  * I'm not sure whether that should be treated as an error, or as a no-op,
    or even a no-op with an asterisk (the asterisk being, if the offset is
    past the end of the input file, should it get zero-padding?)
+
+alpha-la.ips:
+ * A single data patch, 37 bytes into the target file, containing the text
+   "LaLiLuLeLo".
+
+empty.txt:
+ * An empty file. Not really useful but a good test case to make sure the
+   the program doesn't do anything stupid.

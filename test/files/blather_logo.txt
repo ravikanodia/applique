@@ -1,0 +1,44 @@
+01234567891123456789212345678931234567894123456789512345678961234567897123456789
+This is a text file used for testing some patches of various types. There is not
+much to say about it, except that it is plain ASCII text, and that every line of
+it is exactly 80 characters long. None of that matters from the perspective of a
+patch file, but it makes visual inspection of the files easy. Here is probably a
+good place to put some big boxes. ASCII art patches could make some use of them.
++==============================================================================+
+|   _____ ____________________.____    .___________   ____ ______________      |
+|  /  _  \\______   \______   \    |   |   \_____  \ |    |   \_   _____/      |
+| /  /_\  \|     ___/|     ___/    |   |   |/  / \  \|    |   /|    __)_       |
+|/    |    \    |    |    |   |    |___|   /   \_/.  \    |  / |        \      |
+|\____|__  /____|    |____|   |_______ \___\_____\ \_/______/ /_______  /      |
+|        \/                           \/          \__>                \/       |
+|                                                                              |
+|       ,--,   ,---. _______  .---.  ,-. _______                               |
+|     .' .'    | .-'|__   __|( .-._) |(||__   __|                              |
+|     |  |  __ | `-.  )| |  (_) \    (_)  )| |                                 |
+|     \  \ ( _)| .-' (_) |  _  \ \   | | (_) |                                 |
+|      \  `-) )|  `--. | | ( `-'  )  | |   | |                                 |
+|      )\____/ /( __.' `-'  `----'   `-'   `-'                                 |
+|     (__)    (__)                                                             |
+|                                                                              |
+|           ______   _______  _        _______                                 |
+|          (  __  \ (  ___  )( (    /|(  ____ \                                |
+|          | (  \  )| (   ) ||  \  ( || (    \/                                |
+|          | |   ) || |   | ||   \ | || (__                                    |
+|          | |   | || |   | || (\ \) ||  __)                                   |
+|          | |   ) || |   | || | \   || (                                      |
+|          | (__/  )| (___) || )  \  || (____/\                                |
+|          (______/ (_______)|/    )_)(_______/                                |
+|                                                                              |
+|                                                                              |
+|                                                                              |
+|                                                                              |
+|                                                                              |
+|                                                                              |
+|                                                                              |
++==============================================================================+
+There are thirty rows of empty space in that box, and seventy-eight columns of a
+similar nature. That means the inner space is 30 * 78 = 2100 + 240 = 2340 spaces
+in total. Of course, the border adds two rows and two columns, so the true total
+is 32 * 80 = 2400 + 160 = 2560 spaces. And of course, before you go using any of
+those numbers to create a patch, make sure you are considering the newline which
+is after each line of text, meaning each line is REALL 81 characters long. Whew!
