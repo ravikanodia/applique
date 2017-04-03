@@ -34,6 +34,13 @@ argParser.addArgument(
 	help: 'patch type',
     });
 argParser.addArgument(
+    ['-c', '--checks'],
+    {
+	choices: ['ignore', 'warn', 'enforce'],
+	defaultValue: 'enforce',
+	help: 'enforce integrity checks (varies by patch type)'
+    });
+argParser.addArgument(
     ['-d', '--dry-run'],
     {
 	help: 'dry run (don\'t save output file)'
@@ -46,9 +53,9 @@ var inputSource = SourceBuffer(fs.readFileSync(args.file));
 var patchSource = SourceBuffer(fs.readFileSync(args.patch));
 var outputBuffer = SourceBuffer();
 if (args.type == 'ups') {
-    parser = upsParser(inputSource, patchSource, outputBuffer);
+    parser = upsParser(inputSource, patchSource, outputBuffer, args);
 } else {    
-    parser = ipsParser(inputSource, patchSource, outputBuffer);
+    parser = ipsParser(inputSource, patchSource, outputBuffer, args);
 }
 parser.applyAllPatches();
 

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const File = require('../lib/File');
+const optionalCheck = require('../lib/optionalCheck');
 
 // Based on http://fileformats.archiveteam.org/wiki/UPS_(binary_patch_format)
 
@@ -13,7 +14,9 @@ const File = require('../lib/File');
 // -- A block of data to XOR with the source file
 //  +++ The block ends with a zero byte (which is included in the block)
 //   --- ... except for the last block, if it is past the end of the original file(?)
-// Lastly, three CRC32 checksums:
+// Lastly, three CRC32 checksums. These are LITTLE-ENDIAN with respect to byte
+// order. If your file has the CRC32 checksum 0x400C7700, the patch will contain the
+// value 00770C40. The checksums are:
 // -- One for the source file
 // -- One for the destination file
 // -- One for the patch itself (the contents of the patch, except for this checksum)
@@ -56,10 +59,11 @@ const UPS_HEADER = "UPS1";
 
 const CRC32_SIZE = 4;
 
-var UpsParser = function(inputSource, patchSource, outputBuffer) {
+var UpsParser = function(inputSource, patchSource, outputBuffer, parsedArgs) {
     this.inputSource = inputSource;
     this.patchSource = patchSource;
     this.outputBuffer = outputBuffer;
+    this.checks = parsedArgs.checks;
 
     this.inputFilesize = null;
     this.outputFilesize = null;
@@ -93,8 +97,6 @@ var UpsParser = function(inputSource, patchSource, outputBuffer) {
 	}
     };
 
-//    console.dir("Parsing UPS file: " + this.filename);
-
     this.validateUpsFileHeader = function() {
 	var headerBuffer = this.patchSource.readBytesAsBuffer(UPS_HEADER.length, "header");
 	if (headerBuffer != UPS_HEADER) {
@@ -104,37 +106,55 @@ var UpsParser = function(inputSource, patchSource, outputBuffer) {
     }
 
     this.getCRCs = function() {
-	this.inputCRC = this.patchSource.readBytesAsBuffer(
+	this.inputCRC = this.patchSource.readBytesAsUIntLE(
 	    CRC32_SIZE,
 	    "CRC32",
 	    this.patchSource.getLength() - (CRC32_SIZE * 3));
-	this.outputCRC = this.patchSource.readBytesAsBuffer(
+	this.outputCRC = this.patchSource.readBytesAsUIntLE(
 	    CRC32_SIZE,
 	    "CRC32",
 	    this.patchSource.getLength() - (CRC32_SIZE * 2));
-	this.patchCRC = this.patchSource.readBytesAsBuffer(
+	this.patchCRC = this.patchSource.readBytesAsUIntLE(
 	    CRC32_SIZE,
 	    "CRC32",
 	    this.patchSource.getLength() - CRC32_SIZE);
     }
 
     this.validateInputFile = function() {
-	var inputFilesize = this.inputSource.getLength();
-	if (inputFilesize != this.inputFilesize) {
-	    throw new Error("UPS patch specifies input file size of " + this.inputFilesize + ", but the specified file is of size " + inputFilesize);
-	} else {
-	    console.log("Input file has correct size of " + this.inputFilesize);
-	}
+	var that = this;
+	optionalCheck(
+	    function() { return that.inputSource.getLength(); },
+	    this.inputFilesize,
+	    "input size",
+	    this.checks);
+	optionalCheck(
+	    function() { return that.inputSource.crc(); },
+	    this.inputCRC,
+	    "input CRC32",
+	    this.checks);
+    }
 
-	console.log("CRC32 checksum validation not supported; assuming input is valid!");
+    this.validateOutputFile = function() {
+	var that = this;
+	optionalCheck(
+	    function() { return that.outputBuffer.getLength(); },
+	    this.outputFilesize,
+	    "output size",
+	    this.checks);
+	optionalCheck(
+	    function() { return that.outputBuffer.crc(); },
+	    this.outputCRC,
+	    "output CRC32",
+	    this.checks);
     }
 
     this.validatePatchFile = function() {
-	var patchBuf = this.patchSource.readBytesAsBuffer(
-	    this.patchSource.getLength() - CRC32_SIZE,
-	    "patch",
-	    0);
-	console.log("CRC32 checksum validation not supported; assuming patch is valid!");
+	var that = this;
+	optionalCheck(
+	    function() { return that.patchSource.crc(CRC32_SIZE); },
+	    this.patchCRC,
+	    "patch CRC32 (ignoring its own checksum)",
+	    this.checks);
     }
 
     this.readUpsVariableLengthInteger = function() {
@@ -210,6 +230,7 @@ var UpsParser = function(inputSource, patchSource, outputBuffer) {
 	    var patch = patches[i];
 	    patch(outputBuffer);
 	}
+	this.validateOutputFile();
     }
 	
     return this;	
