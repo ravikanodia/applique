@@ -12,30 +12,14 @@ function randomFilename(baseFilename) {
     return str;
 }
 
-//function testIpsPatch(inputFilename, patchFilename, goldenFilename) {
-//    var inputFile = File(inputFile);
-//    var patchFile = File(patchFile);
-//     var outputFile = randomFilename(goldenFilename);
-
 describe('UpsParser', function() {
-/*    it('applies a no-op correctly', function(done) {
-	var inputBuf = SourceBuffer(Buffer("abcdefg"));
-	var outputBuf = SourceBuffer();
-	var patchBuf = SourceBuffer(fs.readFileSync('test/patches/noop.ips'));
-
-	var parser = IpsParser(inputBuf, patchBuf, outputBuf);
-	parser.applyAllPatches();
-
-	outputBuf.equals(inputBuf).should.equal(true);
-	done();
-    });*/
 
     it('applies a data patch correctly', function(done) {
 	var inputBuf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n"));
 	var outputBuf = SourceBuffer();
 	var patchBuf = SourceBuffer(fs.readFileSync('test/patches/alpha-la.ups'));
 
-	var parser = UpsParser(inputBuf, patchBuf, outputBuf);
+	var parser = UpsParser(inputBuf, patchBuf, outputBuf, { checks: 'enforce' });
 	parser.applyAllPatches();
 	var expectBuf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLaLiLuLeLoVWXYZ0123456789\n"));
 	console.log(expectBuf);
