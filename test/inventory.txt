@@ -12,9 +12,24 @@ zero_run_length.ips:
    or even a no-op with an asterisk (the asterisk being, if the offset is
    past the end of the input file, should it get zero-padding?)
 
+five_run_length.ips:
+ * An IPS file specifying a single run, 16 bytes into the target file,
+   containing the byte 0x2A (ASCII "*") repeated five times.
+
+two_runs.ips:
+ * An IPS file specifying two runs. The first is at the start of the file,
+   containing the byte 0x2A (ASCII "*") repeated five times. After an
+   offset off 255 characters, the same byte will be repeated 255 times.
+
 alpha-la.ips:
  * A single data patch, 37 bytes into the target file, containing the text
    "LaLiLuLeLo".
+
+alpha-la.ups:
+ * Changes "alphabet.txt" to replace "LMNOPQRSTU" with "LaLiLuLeLo". Note
+   that, unlike an IPS file, a UPS file is based on xor, so it won't have
+   the same effect on another file. Also, the CRC32 check will fail if it
+   is run on another file.
 
 empty.txt:
  * An empty file. Not really useful but a good test case to make sure the
