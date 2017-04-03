@@ -51,4 +51,11 @@ describe('SourceBuffer', function() {
 	    done();
 	});
     });
+
+    describe('crc check', function() {
+	it('returns the correct crc32 value for a buffer', function() {
+	    var buf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n"));
+	    buf.crc().toString(16).should.equal("f8400c77");
+	});
+    });
 });
