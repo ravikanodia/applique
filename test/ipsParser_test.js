@@ -12,11 +12,6 @@ function randomFilename(baseFilename) {
     return str;
 }
 
-//function testIpsPatch(inputFilename, patchFilename, goldenFilename) {
-//    var inputFile = File(inputFile);
-//    var patchFile = File(patchFile);
-//     var outputFile = randomFilename(goldenFilename);
-
 describe('IpsParser', function() {
     it('applies a no-op correctly', function(done) {
 	var inputBuf = SourceBuffer(Buffer("abcdefg"));
@@ -44,6 +39,14 @@ describe('IpsParser', function() {
     });
 
     it('applies a run-length encoded patch correctly', function(done) {
+	var inputBuf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"));
+	var outputBuf = SourceBuffer();
+	var patchBuf = SourceBuffer(fs.readFileSync('test/patches/five_run_length.ips'));
+
+	var parser = IpsParser(inputBuf, patchBuf, outputBuf);
+	parser.applyAllPatches();
+	var expectBuf = SourceBuffer(Buffer("abcdefghijklmnop*****wxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"));
+
 	done();
     });
 
