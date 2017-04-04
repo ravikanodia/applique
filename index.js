@@ -3,8 +3,7 @@
 
 const fs = require('fs');
 var ArgumentParser = require('argparse').ArgumentParser;
-var ipsParser = require('./parsers/ipsParser');
-var upsParser = require('./parsers/upsParser');
+var ParserFactory = require('./parsers/ParserFactory');
 var SourceBuffer = require('./lib/SourceBuffer');
 
 var argParser = new ArgumentParser({
@@ -48,15 +47,11 @@ argParser.addArgument(
 
 var args = argParser.parseArgs();
 
-var parser;
 var inputSource = SourceBuffer(fs.readFileSync(args.file));
 var patchSource = SourceBuffer(fs.readFileSync(args.patch));
 var outputBuffer = SourceBuffer();
-if (args.type == 'ups') {
-    parser = upsParser(inputSource, patchSource, outputBuffer, args);
-} else {    
-    parser = ipsParser(inputSource, patchSource, outputBuffer, args);
-}
+var parserFactory = ParserFactory(inputSource, patchSource, outputBuffer, args);
+var parser = parserFactory.getParser();
 parser.applyAllPatches();
 
 outputBuffer.saveToFile(args.output);
