@@ -29,7 +29,8 @@ argParser.addArgument(
 argParser.addArgument(
     ['-t', '--type'],
     {
-	choices: ['ips', 'ups'],
+	choices: ['auto', 'ips', 'ups'],
+	defaultValue: ['auto'],
 	help: 'patch type',
     });
 argParser.addArgument(
