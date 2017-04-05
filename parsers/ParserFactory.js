@@ -16,6 +16,11 @@ var ParserFactory = function(inputSource, patchSource, outputBuffer, parsedArgs)
 
     this.getParser = function() {
 	var parserType;
+
+	if (parsedArgs.mode !== 'apply') {
+	    throw new Error("patch creation is not implemented yet");
+	}
+
 	if (parsedArgs.type == 'ips') {
 	    parserType = IpsParser;
 	} else if (parsedArgs.type == 'ups') {

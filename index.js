@@ -31,7 +31,14 @@ argParser.addArgument(
     {
 	choices: ['auto', 'ips', 'ups'],
 	defaultValue: ['auto'],
-	help: 'patch type',
+	help: 'patch type'
+    });
+argParser.addArgument(
+    ['-m', '--mode'],
+    {
+	choices: ['apply', 'create'],
+	defaultValue: 'apply',
+	help: 'apply a patch to a file, or create a patch based on two files'
     });
 argParser.addArgument(
     ['-c', '--checks'],
@@ -48,11 +55,20 @@ argParser.addArgument(
 
 var args = argParser.parseArgs();
 
-var inputSource = SourceBuffer(fs.readFileSync(args.file));
-var patchSource = SourceBuffer(fs.readFileSync(args.patch));
-var outputBuffer = SourceBuffer();
-var parserFactory = ParserFactory(inputSource, patchSource, outputBuffer, args);
+var initialFile = SourceBuffer(fs.readFileSync(args.file));
+var patchFile;
+var targetFile;
+var saveBuffer;
+if (args.mode === 'apply') {
+    patchFile = SourceBuffer(fs.readFileSync(args.patch));
+    saveBuffer = targetFile = SourceBuffer();
+} else if (args.mode === 'create') {
+    targetFile = SourceBuffer(fs.readFileSync(args.output));
+    saveBuffer = patchFile = SourceBuffer();
+}
+
+var parserFactory = ParserFactory(initialFile, patchFile, targetFile, args);
 var parser = parserFactory.getParser();
 parser.applyAllPatches();
 
-outputBuffer.saveToFile(args.output);
+saveBuffer.saveToFile(args.output);
