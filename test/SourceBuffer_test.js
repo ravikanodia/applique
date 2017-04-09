@@ -52,6 +52,82 @@ describe('SourceBuffer', function() {
 	});
     });
 
+    describe('readUIntBE', function() {
+	it('reads bytes as a big-endian unsigned integer', function(done) {
+	    var aBuf = SourceBuffer(Buffer("abcdefghijkl"));
+	    // 'a' is ascii 97.
+	    aBuf.readBytesAsUIntBE(1, "test integer", 0).should.equal(97);
+
+	    // 'e' is ascii 101.
+	    aBuf.readBytesAsUIntBE(1, "test integer", 4).should.equal(101);
+
+	    // 'd' is ascii 100. 'e' is ascii 101.
+	    // 100 * 256 + 101 = 25701
+	    aBuf.readBytesAsUIntBE(2, "test integer", 3).should.equal(25701);
+
+	    // 'g' -> 103. 'h' -> 104. 'i' -> '105'. 'j' -> '106'.
+	    // 106 + 256 * 105 + 256 * 256 * 104 + 256 * 256 * 256 * 103 = 1734895978
+	    aBuf.readBytesAsUIntBE(4, "test integer", 6).should.equal(1734895978);
+
+	    done();
+	});
+
+	it('modifies the file\'s position when used in linear mode', function(done) {
+	    var aBuf = SourceBuffer(Buffer("abcdefghijkl"));
+	    aBuf.readBytesAsUIntBE(4, "test integer", null);
+
+	    aBuf.getPosition().should.equal(4);
+	    done();
+	});
+
+	it('does not modify the file\'s position when used in non-linear mode', function(done) {
+	    var aBuf = SourceBuffer(Buffer("abcdefghijkl"));
+	    aBuf.readBytesAsUIntBE(4, "test integer", 2);
+
+	    aBuf.getPosition().should.equal(0);
+	    done();
+	});
+    });
+
+    describe('readUIntLE', function() {
+	it('reads bytes as a big-endian unsigned integer', function(done) {
+	    var aBuf = SourceBuffer(Buffer("abcdefghijkl"));
+
+	    // 'a' is ascii 97.
+	    aBuf.readBytesAsUIntLE(1, "test integer", 0).should.equal(97);
+
+	    // 'e' is ascii 101.
+	    aBuf.readBytesAsUIntLE(1, "test integer", 4).should.equal(101);
+
+	    // 'd' is ascii 100. 'e' is ascii 101.
+	    // 100 + 256 * 101 = 25956
+	    aBuf.readBytesAsUIntLE(2, "test integer", 3).should.equal(25956);
+
+	    // 'g' -> 103. 'h' -> 104. 'i' -> '105'. 'j' -> '106'.
+	    // 103 + 256 * 104 + 256 * 256 * 105 + 256 * 256 * 256 * 106
+	    aBuf.readBytesAsUIntLE(4, "test integer", 6).should.equal(1785292903);
+
+	    done();
+	});
+
+	it('modifies the file\'s position when used in linear mode', function(done) {
+	    var aBuf = SourceBuffer(Buffer("abcdefghijkl"));
+	    aBuf.readBytesAsUIntLE(4, "test integer", null);
+
+	    aBuf.getPosition().should.equal(4);
+	    done();
+	});
+
+	it('does not modify the file\'s position when used in non-linear mode', function(done) {
+	    var aBuf = SourceBuffer(Buffer("abcdefghijkl"));
+	    aBuf.readBytesAsUIntLE(4, "test integer", 2);
+
+	    aBuf.getPosition().should.equal(0);
+	    done();
+	});
+
+    });
+
     describe('crc check', function() {
 	it('returns the correct crc32 value for a buffer', function() {
 	    var buf = SourceBuffer(Buffer("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n"));
