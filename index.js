@@ -59,16 +59,19 @@ var initialFile = SourceBuffer(fs.readFileSync(args.file));
 var patchFile;
 var targetFile;
 var saveBuffer;
+var saveFile;
 if (args.mode === 'apply') {
     patchFile = SourceBuffer(fs.readFileSync(args.patch));
     saveBuffer = targetFile = SourceBuffer();
+    saveFile = args.output;
 } else if (args.mode === 'create') {
     targetFile = SourceBuffer(fs.readFileSync(args.output));
     saveBuffer = patchFile = SourceBuffer();
+    saveFile = args.patch;
 }
 
 var parserFactory = ParserFactory(initialFile, patchFile, targetFile, args);
 var parser = parserFactory.getParser();
 parser.applyAllPatches();
 
-saveBuffer.saveToFile(args.output);
+saveBuffer.saveToFile(saveFile);
