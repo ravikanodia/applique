@@ -1,7 +1,7 @@
 const fs = require('fs');
 const File = require('../lib/File');
-const IpsParser = require('./ipsParser');
-const UpsParser = require('./upsParser');
+const IpsParser = require('./IpsParser');
+const UpsParser = require('./UpsParser');
 
 /**
  * ParserFactory abstracts out the process of choosing a
