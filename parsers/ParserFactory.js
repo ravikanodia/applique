@@ -8,6 +8,10 @@ const UpsParser = require('./UpsParser');
  * ParserFactory abstracts out the process of choosing a
  * parser type and instantiating it. Logic related to automatic
  * patch type detection should probably go here.
+ *
+ * TODO: Switch from parsedArgs to named arguments. Or possibly create a
+ * "Configuration" object (which can be built item-by-item or come from
+ * an args object) and use it here.
  */
 var ParserFactory = function(inputSource, patchSource, outputBuffer, configuration) {
   this.inputSource = inputSource;

@@ -22,4 +22,10 @@ skel:
 	touch index.js
 	npm install mocha chai --save-dev
 
-.PHONY: test tap unit jshint skel
+web:
+	./build/build-web.sh
+
+clean:
+	rm -rf ./target
+
+.PHONY: test tap unit jshint skel clean web
