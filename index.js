@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 var ArgumentParser = require('argparse').ArgumentParser;
+var Configuration = require('./lib/Configuration');
 var ParserFactory = require('./parsers/ParserFactory');
 var SourceBuffer = require('./lib/SourceBuffer');
 
@@ -54,23 +55,24 @@ argParser.addArgument(
     });
 
 var args = argParser.parseArgs();
+var configuration = Configuration.fromObject(args);
 
-var initialFile = SourceBuffer(fs.readFileSync(args.file));
+var initialFile = SourceBuffer(fs.readFileSync(configuration.inputFilename));
 var patchFile;
 var targetFile;
 var saveBuffer;
 var saveFile;
 if (args.mode === 'apply') {
-    patchFile = SourceBuffer(fs.readFileSync(args.patch));
+    patchFile = SourceBuffer(fs.readFileSync(configuration.patchFilename));
     saveBuffer = targetFile = SourceBuffer();
-    saveFile = args.output;
+    saveFile = configuration.outputFilename;
 } else if (args.mode === 'create') {
-    targetFile = SourceBuffer(fs.readFileSync(args.output));
+    targetFile = SourceBuffer(fs.readFileSync(configuration.outputFilename));
     saveBuffer = patchFile = SourceBuffer();
-    saveFile = args.patch;
+    saveFile = configuration.patchFilename;
 }
 
-var parserFactory = ParserFactory(initialFile, patchFile, targetFile, args);
+var parserFactory = ParserFactory(initialFile, patchFile, targetFile, configuration);
 var parser = parserFactory.getParser();
 parser.applyAllPatches();
 
