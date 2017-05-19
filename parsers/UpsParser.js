@@ -59,11 +59,10 @@ const UPS_HEADER = "UPS1";
 
 const CRC32_SIZE = 4;
 
-var UpsParser = function(inputSource, patchSource, outputBuffer, parsedArgs) {
+var UpsParser = function(inputSource, patchSource, outputBuffer, configuration) {
     this.inputSource = inputSource;
     this.patchSource = patchSource;
     this.outputBuffer = outputBuffer;
-    this.checks = parsedArgs.checks;
 
     this.inputFilesize = null;
     this.outputFilesize = null;
@@ -126,12 +125,12 @@ var UpsParser = function(inputSource, patchSource, outputBuffer, parsedArgs) {
 	    function() { return that.inputSource.getLength(); },
 	    this.inputFilesize,
 	    "input size",
-	    this.checks);
+	    configuration.checks);
 	optionalCheck(
 	    function() { return that.inputSource.crc(); },
 	    this.inputCRC,
 	    "input CRC32",
-	    this.checks);
+	    configuration.checks);
     }
 
     this.validateOutputFile = function() {
