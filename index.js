@@ -76,4 +76,6 @@ var parserFactory = ParserFactory(initialFile, patchFile, targetFile, configurat
 var parser = parserFactory.getParser();
 parser.applyAllPatches();
 
-saveBuffer.saveToFile(saveFile);
+if (!configuration['dry-run']) {
+  saveBuffer.saveToFile(saveFile);
+}
