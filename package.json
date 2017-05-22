@@ -10,7 +10,8 @@
   "dependencies": {
     "argparse": "^1.0.9",
     "chai": "^3.5.0",
-    "crc": "^3.4.4"
+    "crc": "^3.4.4",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "mocha": "^3.2.0",
