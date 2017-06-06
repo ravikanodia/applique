@@ -124,7 +124,7 @@ class Patcher extends React.Component {
             );
 
             var dataView = new DataView(targetBuffer.toArrayBuffer());
-            FileSaver.saveAs(new Blob([dataView]), 'foo.txt');
+            FileSaver.saveAs(new Blob([dataView]), outputFilename);
           }
         })
     );
